@@ -26,7 +26,8 @@ module uart_tx_fsm(
     input byte_done,
     output reg bit_select_en,
     output reg bit_counter_en,
-    output reg idle_high_en
+    output reg idle_high_en,
+    output reg clear_baud_ticks
 );
 
   reg [3:0] state = 4'b0000;
@@ -88,14 +89,17 @@ module uart_tx_fsm(
       IDLE: begin
         bit_select_en = 1'b0;
         idle_high_en = 1'b1;
+        clear_baud_ticks = 1'b1;
       end
 
       WAIT_TICK: begin
+        clear_baud_ticks = 1'b0;
         bit_select_en = 1'b0;
         idle_high_en = 1'b0;
       end
 
       SEND_BIT: begin
+        clear_baud_ticks = 1'b0;
         bit_select_en = 1'b1;
         idle_high_en = 1'b0;
         if (baud_tick)
@@ -105,11 +109,13 @@ module uart_tx_fsm(
       end
 
       BYTE_DONE: begin
+        clear_baud_ticks = 1'b0;
         bit_select_en = 1'b0;
         idle_high_en = 1'b1;
       end
 
       default: begin
+        clear_baud_ticks = 1'b1;
         bit_select_en = 1'b0;
         idle_high_en = 1'b1;
       end

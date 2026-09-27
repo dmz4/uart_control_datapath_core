@@ -14,15 +14,25 @@
 //  - clk: system clock used for baud generation
 module uart_baud_tick_gen(
     input clk,
+    input baud_rate_sel,
+    input clear,
     output reg tick
 );
 
   integer counter;
+  integer limit;
+
+  assign limit = baud_rate_sel ? 104 : 52;
+  // Selects the baud rate based on the baud_rate_sel input.
 
   // The counter is reset and a pulse is generated when the baud-period
   // limit has been reached. This approximates a UART bit-period timer.
   always @(posedge clk) begin
-    if (counter == 104) begin
+    if (clear) begin
+      counter <= 0;
+      tick <= 0;
+    end
+    else if(counter == limit) begin
       counter <= 0;
       tick <= 1;
     end else begin

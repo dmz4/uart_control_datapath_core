@@ -17,12 +17,12 @@ module uart_bit_counter(
     input clk,
     input en,
     output reg [2:0] bit_index,
-    output reg tick
+    output byte_done
 );
 
-  // The module is designed to assert tick when the counter reaches the
-  // last bit position, which corresponds to the 8th transmitted bit.
-  assign tick = (bit_index == 7) ? 1'b1 : 1'b0;
+  // The module is designed to assert byte_done when the counter reaches
+  // the last bit position, which corresponds to the 8th transmitted bit.
+  assign byte_done = (bit_index == 7) ? 1'b1 : 1'b0;
 
   always @(posedge clk) begin
     if (en) begin

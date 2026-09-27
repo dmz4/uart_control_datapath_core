@@ -24,7 +24,11 @@ module uart_tx_top(
     output reg tx_serial
 );
 
-  wire bit_select_en, bit_counter_en, idle_high_en, baud_tick;
+  wire bit_select_en;
+  wire bit_counter_en;
+  wire idle_high_en;
+  wire baud_tick;
+  wire clear_baud_ticks;
   wire byte_done;
 
   // Control path: it decides when the module is idle, when it must
@@ -36,7 +40,8 @@ module uart_tx_top(
     .byte_done(byte_done),
     .bit_select_en(bit_select_en),
     .bit_counter_en(bit_counter_en),
-    .idle_high_en(idle_high_en)
+    .idle_high_en(idle_high_en),
+    .clear_baud_ticks(clear_baud_ticks)
   );
 
   // Datapath: it selects the bit to send, increments the bit counter,
@@ -49,7 +54,8 @@ module uart_tx_top(
     .idle_high_en(idle_high_en),
     .byte_done(byte_done),
     .baud_tick(baud_tick),
-    .tx_serial(tx_serial)
+    .tx_serial(tx_serial),
+    .clear_baud_ticks(clear_baud_ticks)
   );
 
 endmodule

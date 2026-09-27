@@ -7,21 +7,21 @@
 //
 // Description:
 // This register captures the selected serial bit and stores it until the
-// next clock edge. The output q is the signal effectively assigned to
-// the UART tx line.
+// next clock edge. The output serial_out is the signal effectively
+// assigned to the UART TX line.
 //
 // Clock domains:
 //  - clk: synchronous register clock
 module uart_tx_register(
     input clk,
-    input d,
-    output reg q
+    input serial_data_in,
+    output reg serial_out
 );
 
-  // The value presented at input d is sampled on each rising edge and
-  // propagated to the output q.
+  // The value presented at input serial_data_in is sampled on each rising
+  // edge and propagated to the output serial_out.
   always @(posedge clk) begin
-    q <= d;
+    serial_out <= serial_data_in;
   end
 
 endmodule

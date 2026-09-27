@@ -21,30 +21,33 @@ module uart_tx_datapath(
     input bit_select_en,
     input bit_counter_en,
     input idle_high_en,
+    input clear_baud_ticks,
     output byte_done,
     output baud_tick,
     output reg tx_serial
 );
 
   wire next_tx_bit;
-  reg [2:0] bit_index;
+  wire [2:0] bit_index;
 
   // Data selection logic. When the control path enables a transmission
   // cycle, the current bit is chosen from the input byte. Otherwise, the
   // default idle value is driven.
   assign next_tx_bit = (bit_select_en & data_in[bit_index]) |
-                       (idle_high_en & 1'b1);
+                       (idle_high_en);
 
   // Serial register: loads the selected bit at each clock edge.
   uart_tx_register tx_register_inst(
     .clk(clk),
-    .d(next_tx_bit),
-    .q(tx_serial)
+    .serial_data_in(next_tx_bit),
+    .serial_out(tx_serial)
   );
 
   // Baud generator: produces the timing tick used to serialize each bit.
   uart_baud_tick_gen baud_tick_gen_inst(
     .clk(clk),
+    .baud_rate_sel(1'b1),
+    .clear(clear_baud_ticks),
     .tick(baud_tick)
   );
 
@@ -54,7 +57,7 @@ module uart_tx_datapath(
   uart_bit_counter bit_counter_inst(
     .clk(clk),
     .bit_index(bit_index),
-    .tick(byte_done),
+    .byte_done(byte_done),
     .en(bit_counter_en)
   );
 
