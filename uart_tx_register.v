@@ -1,9 +1,6 @@
 // File: uart_tx_register.v
 // Author: Diego Dominguez
 // Hierarchy: UART transmitter datapath / serial register
-// Version history:
-//  v1.0  2026-09-26  Initial UART register implementation,
-//                   including documentation and naming convention
 //
 // Description:
 // This register captures the selected serial bit and stores it until the

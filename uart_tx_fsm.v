@@ -1,40 +1,39 @@
 // File: uart_tx_fsm.v
 // Author: Diego Dominguez
 // Hierarchy: UART transmitter control path / FSM
-// Version history:
-//  v1.0  2026-09-26  Initial UART transmitter FSM implementation,
-//                   including documentation and naming convention
 //
 // Description:
 // This module implements the control unit for the UART transmitter.
-// It coordinates the transmission sequence through a small state
-// machine that waits for a start request, waits for each baud tick,
-// enables bit shifting, and returns to idle when the byte is complete.
+// It sequences the frame transmission from the idle state to the start,
+// payload, parity, and completion phases. The FSM controls the mux
+// selection, payload register enable, and bit-counter progression.
 //
 // Clock domains:
 //  - clk: state machine clock
 //
 // Control behavior:
 //  - IDLE: waiting for start_tx
-//  - WAIT_TICK: waiting for the baud period before sending a bit
-//  - SEND_BIT: data transmission and bit counter advance
-//  - BYTE_DONE: end-of-byte completion state before returning to idle
+//  - WAIT_TICK: waiting for the baud tick before sending the start bit
+//  - SEND_BIT: transmitting the payload bits
+//  - PARITY_BIT: transmitting the parity field
+//  - BYTE_DONE: finalization state before returning to idle
 module uart_tx_fsm(
     input clk,
     input baud_tick,
     input start_tx,
     input byte_done,
-    output reg bit_select_en,
+    output reg reg_input,
+    output reg [1:0]  sel_next_bit,
     output reg bit_counter_en,
-    output reg idle_high_en,
-    output reg clear_baud_ticks
+    output reg clear_baud_ticks,
+    output reg clear_bit_counter
 );
 
-  reg [3:0] state = 4'b0000;
-  reg [3:0] next_state = 4'b0000;
+  reg [2:0] state = 3'b000;
+  reg [2:0] next_state = 3'b000;
 
-  parameter IDLE = 4'b0000, WAIT_TICK = 4'b0001;
-  parameter SEND_BIT = 4'b0011, BYTE_DONE = 4'b0010;
+  parameter IDLE = 3'b000, WAIT_TICK = 3'b001;
+  parameter SEND_BIT = 3'b011, PARITY_BIT = 3'b010, BYTE_DONE = 3'b110;
 
   // State register update. The next-state value is captured on each
   // rising edge of the clock.
@@ -62,9 +61,16 @@ module uart_tx_fsm(
 
       SEND_BIT: begin
         if (baud_tick & byte_done)
-          next_state = BYTE_DONE;
+          next_state = PARITY_BIT;
         else
           next_state = SEND_BIT;
+      end
+
+      PARITY_BIT : begin
+        if (baud_tick)
+          next_state = BYTE_DONE;
+        else
+          next_state = PARITY_BIT;
       end
 
       BYTE_DONE: begin
@@ -84,40 +90,57 @@ module uart_tx_fsm(
   // and enable datapath operations such as bit selection and counter
   // updates.
   always @(*) begin
-    bit_counter_en = 1'b0;
+    
     case (state)
       IDLE: begin
-        bit_select_en = 1'b0;
-        idle_high_en = 1'b1;
+        sel_next_bit = 2'b01; // Select idle bit
         clear_baud_ticks = 1'b1;
+        clear_bit_counter = 1'b1;
+        bit_counter_en = 1'b0;
+        reg_input = 1'b0;
       end
 
       WAIT_TICK: begin
         clear_baud_ticks = 1'b0;
-        bit_select_en = 1'b0;
-        idle_high_en = 1'b0;
+        sel_next_bit = 2'b00; // Select start bit
+        clear_bit_counter = 1'b0;
+        bit_counter_en = 1'b0;
+        reg_input = 1'b1;
       end
 
       SEND_BIT: begin
         clear_baud_ticks = 1'b0;
-        bit_select_en = 1'b1;
-        idle_high_en = 1'b0;
+        sel_next_bit = 2'b10; // Select data bit
+        clear_bit_counter = 1'b0;
+        reg_input = 1'b0;
         if (baud_tick)
           bit_counter_en = 1'b1;
         else
           bit_counter_en = 1'b0;
       end
 
+      PARITY_BIT: begin
+        clear_baud_ticks = 1'b0;
+        sel_next_bit = 2'b11; // Select parity bit
+        clear_bit_counter = 1'b0;
+        reg_input = 1'b0;
+        bit_counter_en = 1'b0;
+      end
+
       BYTE_DONE: begin
         clear_baud_ticks = 1'b0;
-        bit_select_en = 1'b0;
-        idle_high_en = 1'b1;
+        sel_next_bit = 2'b01; // Select idle bit
+        clear_bit_counter = 1'b0;
+        reg_input = 1'b0;
+        bit_counter_en = 1'b0;
       end
 
       default: begin
         clear_baud_ticks = 1'b1;
-        bit_select_en = 1'b0;
-        idle_high_en = 1'b1;
+        sel_next_bit = 2'b01; // Select idle bit
+        clear_bit_counter = 1'b1;
+        reg_input = 1'b0;
+        bit_counter_en = 1'b0;
       end
     endcase
   end

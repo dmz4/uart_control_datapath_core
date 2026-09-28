@@ -1,9 +1,6 @@
 // File: uart_rx_register.v
 // Author: Diego Dominguez
 // Hierarchy: UART receiver datapath / shift register
-// Version history:
-//  v1.0  2026-09-26  Initial UART receive shift register implementation,
-//                   including documentation and naming convention
 //
 // Description:
 // This register shifts the incoming serial bits into the receive byte.

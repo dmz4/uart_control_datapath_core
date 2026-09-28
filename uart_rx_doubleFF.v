@@ -1,9 +1,6 @@
 // File: uart_rx_doubleFF.v
 // Author: Diego Dominguez
 // Hierarchy: UART receiver synchronization stage / double flip-flop
-// Version history:
-//  v1.0  2026-09-26  Initial UART double flip-flop synchronizer,
-//                   including documentation and naming convention
 //
 // Description:
 // This module synchronizes the asynchronous UART input signal to the

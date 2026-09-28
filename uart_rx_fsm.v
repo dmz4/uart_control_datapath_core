@@ -1,19 +1,18 @@
 // File: uart_rx_fsm.v
 // Author: Diego Dominguez
 // Hierarchy: UART receiver control path / FSM
-// Version history:
-//  v1.0  2026-09-26  Initial UART receiver FSM implementation,
-//                   including documentation and naming convention
 //
 // Description:
 // This module controls the receive sequence. It waits for a start bit,
 // enables the sampling tick, shifts each received bit into the register,
-// and returns to idle after the byte is complete.
+// processes the parity phase, and returns to idle after the byte is
+// complete.
 //
 // Control behavior:
 //  - IDLE: waiting for the start bit
 //  - WAIT_TICK: waiting for the baud tick before sampling
 //  - REC_BIT: receiving one bit and advancing the bit counter
+//  - PARITY_BIT: handling the parity field
 //  - BYTE_DONE: end-of-byte state before returning to idle
 module uart_rx_fsm(
     input clk,
@@ -23,14 +22,16 @@ module uart_rx_fsm(
     output reg baud_rate_sel,
     output reg bit_counter_en,
     output reg shift_reg_en,
-    output reg clear_baud_ticks
+    output reg clear_baud_ticks,
+    output reg done,
+    output reg clear_bit_counter
 );
 
-  reg [3:0] state = 4'b0000;
-  reg [3:0] next_state = 4'b0000;
+  reg [2:0] state = 4'b000;
+  reg [2:0] next_state = 4'b000;
 
-  parameter IDLE = 4'b0000, WAIT_TICK = 4'b0001;
-  parameter REC_BIT = 4'b0011, BYTE_DONE = 4'b0010;
+  parameter IDLE = 4'b000, WAIT_TICK = 4'b001;
+  parameter REC_BIT = 4'b011, PARITY_BIT = 4'b010, BYTE_DONE = 4'b110;
 
   // State register update. The FSM advances on each rising edge.
   always @(posedge clk) begin
@@ -56,9 +57,16 @@ module uart_rx_fsm(
 
       REC_BIT: begin
         if (baud_tick & byte_done)
-          next_state = BYTE_DONE;
+          next_state = PARITY_BIT;
         else
           next_state = REC_BIT;
+      end
+
+      PARITY_BIT: begin
+        if (baud_tick)
+          next_state = BYTE_DONE;
+        else
+          next_state = PARITY_BIT;
       end
 
       BYTE_DONE: begin
@@ -78,27 +86,45 @@ module uart_rx_fsm(
   always @(*) begin
     case (state)
       IDLE: begin
-        baud_rate_sel = 1'b0; // baud rate 4800
+        baud_rate_sel = 1'b0; // baud rate 19200
         bit_counter_en = 1'b0;
         shift_reg_en = 1'b0;
         clear_baud_ticks = 1'b1;
+        clear_bit_counter = 1'b1;
+        done = 0;
       end
 
       WAIT_TICK: begin
-        baud_rate_sel = 1'b0; // baud rate 4800
+        baud_rate_sel = 1'b0; // baud rate 19200
         bit_counter_en = 1'b0;
         shift_reg_en = 1'b1;
         clear_baud_ticks = 1'b0;
+        clear_bit_counter = 1'b0;
+        done = 0;
       end
 
       REC_BIT: begin
         baud_rate_sel = 1'b1; // baud rate 9600
-        shift_reg_en = 1'b1;
+        done = 0;
+        clear_bit_counter = 1'b0;
         clear_baud_ticks = 1'b0;
-        if (baud_tick)
-          bit_counter_en = 1'b1;
-        else
-          bit_counter_en = 1'b0;
+        if (baud_tick) begin
+            bit_counter_en = 1'b1;
+            shift_reg_en = 1'b1;
+          end
+        else begin
+            bit_counter_en = 1'b0;
+            shift_reg_en = 1'b0;
+        end
+      end
+
+      PARITY_BIT: begin
+        baud_rate_sel = 1'b1; // baud rate 9600
+        bit_counter_en = 1'b0;
+        shift_reg_en = 1'b0;
+        clear_baud_ticks = 1'b0;
+        clear_bit_counter = 1'b0;
+        done = 0;
       end
 
       BYTE_DONE: begin
@@ -106,13 +132,17 @@ module uart_rx_fsm(
         bit_counter_en = 1'b0;
         shift_reg_en = 1'b0;
         clear_baud_ticks = 1'b0;
+        clear_bit_counter = 1'b0;
+        done = 1;
       end
 
       default: begin
-        baud_rate_sel = 1'b0; // baud rate 4800
+        baud_rate_sel = 1'b0; // baud rate 19200
         bit_counter_en = 1'b0;
         shift_reg_en = 1'b0;
         clear_baud_ticks = 1'b1;
+        clear_bit_counter = 1'b1;
+        done = 0;
       end
     endcase
   end

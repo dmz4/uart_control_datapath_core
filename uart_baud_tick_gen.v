@@ -1,14 +1,12 @@
 // File: uart_baud_tick_gen.v
 // Author: Diego Dominguez
 // Hierarchy: UART transmitter datapath / baud-rate tick generator
-// Version history:
-//  v1.0  2026-09-26  Initial UART baud tick generator implementation,
-//                   including documentation and naming convention
 //
 // Description:
 // This module generates a one-clock pulse at the configured baud rate.
 // The counter is compared against the requested countdown value, and
-// when the threshold is reached, baud_tick is asserted for one cycle.
+// when the threshold is reached, tick is asserted for one cycle. The
+// clear input allows the counter to be reset at the start of a new frame.
 //
 // Clock domains:
 //  - clk: system clock used for baud generation
@@ -20,10 +18,10 @@ module uart_baud_tick_gen(
 );
 
   integer counter;
-  integer limit;
+  wire [7:0] limit;
 
-  assign limit = baud_rate_sel ? 104 : 52;
-  // Selects the baud rate based on the baud_rate_sel input.
+  assign limit = baud_rate_sel ? 7'd104 : 7'd52; // Selects the baud rate when receptor is working because it needs 2x speed than 9600 bps to get the center of the bits
+
 
   // The counter is reset and a pulse is generated when the baud-period
   // limit has been reached. This approximates a UART bit-period timer.

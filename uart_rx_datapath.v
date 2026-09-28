@@ -1,20 +1,19 @@
 // File: uart_rx_datapath.v
 // Author: Diego Dominguez
 // Hierarchy: UART receiver datapath
-// Version history:
-//  v1.0  2026-09-26  Initial UART receiver datapath design,
-//                   including documentation and naming convention
 //
 // Description:
 // This module assembles the receiver datapath. It synchronizes the
 // incoming serial signal, shifts the data bits into the receive
-// register, generates the baud-rate tick, and counts received bits.
+// register, generates the baud-rate tick, counts the received bits, and
+// evaluates the parity-related flow for the current frame.
 //
 // Functional blocks:
 //  - uart_rx_doubleFF: synchronizes the external RX line to the clock
 //  - uart_rx_register: shifts the sampled bit stream into the output byte
 //  - uart_baud_tick_gen: creates the timing pulse used for sampling
 //  - uart_bit_counter: tracks the bit position inside the received byte
+//  - uart_parity_calculator: computes parity from the received payload
 module uart_rx_datapath(
     input clk,
     input rx_serial_in,
@@ -22,7 +21,9 @@ module uart_rx_datapath(
     input bit_counter_en,
     input shift_reg_en,
     input clear_baud_ticks,
+    input clear_bit_counter,
     output start_bit,
+    output parity_bit,
     output baud_tick,
     output byte_done,
     output [7:0] data_out
@@ -56,9 +57,15 @@ module uart_rx_datapath(
   // Bit counter: advances the receive index and marks the end of a byte.
   uart_bit_counter bit_counter_inst(
     .clk(clk),
+    .clear(clear_bit_counter),
     .bit_index(bit_index),
     .byte_done(byte_done),
     .en(bit_counter_en)
+  );
+
+  uart_parity_calculator parity_calc_inst(
+    .data_in(data_out),
+    .parity_out(parity_bit)
   );
 
 endmodule

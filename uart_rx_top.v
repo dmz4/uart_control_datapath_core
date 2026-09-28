@@ -1,9 +1,6 @@
 // File: uart_rx_top.v
 // Author: Diego Dominguez
 // Hierarchy: Top-level UART receiver module
-// Version history:
-//  v1.0  2026-09-26  Initial UART receiver RTL implementation,
-//                   including documentation and naming convention
 //
 // Description:
 // This module instantiates the receiver control path and datapath.
@@ -20,11 +17,13 @@
 module uart_rx_top(
     input clk,
     input data_in,
-    output [7:0] data_out
+    output [7:0] data_out,
+    output parity_bit,
+    output done
 );
 
   wire start_bit, baud_tick, byte_done;
-  wire baud_rate_sel, bit_counter_en, shift_reg_en, clear_baud_ticks;
+  wire baud_rate_sel, bit_counter_en, shift_reg_en, clear_baud_ticks, clear_bit_counter;
 
   // Control path: detects the start bit and schedules bit sampling.
   uart_rx_fsm fsm_inst(
@@ -35,7 +34,9 @@ module uart_rx_top(
     .baud_rate_sel(baud_rate_sel),
     .bit_counter_en(bit_counter_en),
     .shift_reg_en(shift_reg_en),
-    .clear_baud_ticks(clear_baud_ticks)
+    .clear_baud_ticks(clear_baud_ticks),
+    .clear_bit_counter(clear_bit_counter),
+    .done(done)
   );
 
   // Datapath: synchronizes, shifts, and reconstructs the received byte.
@@ -49,7 +50,9 @@ module uart_rx_top(
     .baud_tick(baud_tick),
     .byte_done(byte_done),
     .data_out(data_out),
-    .clear_baud_ticks(clear_baud_ticks)
+    .clear_baud_ticks(clear_baud_ticks),
+    .clear_bit_counter(clear_bit_counter),
+    .parity_bit(parity_bit)
   );
 
 endmodule
